@@ -448,6 +448,82 @@ th.num {
   padding: 28px 10px;
 }
 
+body[data-auth="loading"] .requires-user,
+body[data-auth="loading"] .requires-guest,
+body[data-auth="guest"] .requires-user,
+body[data-auth="guest"] .requires-loading,
+body[data-auth="user"] .requires-guest,
+body[data-auth="user"] .requires-loading {
+  display: none !important;
+}
+
+.status-line {
+  color: var(--muted);
+  text-align: center;
+  padding: 40px 0;
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-email {
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-screen {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+  animation: tab-in 0.34s ease;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  padding: 22px;
+}
+
+.auth-card h2 {
+  margin: 18px 0 14px;
+  font-size: 20px;
+}
+
+.auth-switch {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--button-muted);
+}
+
+#auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-hint {
+  margin: -6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+#auth-submit {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 .tabs {
   display: flex;
   gap: 6px;
@@ -552,6 +628,10 @@ th.num {
   .topbar-controls {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .account {
+    justify-content: space-between;
   }
 
   .donut-layout {

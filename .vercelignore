@@ -1,0 +1,10 @@
+.env
+.env.*
+.git
+.agents
+.cursor
+.neon
+node_modules
+db
+scripts
+skills-lock.json

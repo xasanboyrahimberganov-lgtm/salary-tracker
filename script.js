@@ -1,4 +1,3 @@
-const STORAGE_KEY = "salary-tracker";
 const THEME_KEY = "salary-tracker-theme";
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -42,10 +41,21 @@ const cancelBtn = document.getElementById("cancel-btn");
 const formError = document.getElementById("form-error");
 const formTitle = document.getElementById("form-title");
 const tableBody = document.getElementById("transactions");
+const accountEmail = document.getElementById("account-email");
+const logoutBtn = document.getElementById("logout-btn");
+const authForm = document.getElementById("auth-form");
+const authTitle = document.getElementById("auth-title");
+const authEmail = document.getElementById("auth-email");
+const authPassword = document.getElementById("auth-password");
+const authHint = document.getElementById("auth-hint");
+const authSubmit = document.getElementById("auth-submit");
+const authError = document.getElementById("auth-error");
+const authModeButtons = [...document.querySelectorAll("[data-auth-mode]")];
 
-let transactions = loadTransactions();
+let transactions = [];
 let editingId = null;
 let activeTab = "summary";
+let authMode = "login";
 
 applyTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
 themeToggle.addEventListener("click", () => {
@@ -57,6 +67,44 @@ monthInput.value = currentMonth();
 dateInput.value = todayISO();
 fillCategories("income");
 render();
+restoreSession();
+
+authModeButtons.forEach((button) => {
+  button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
+});
+
+authForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+  if (!email || !password) {
+    authError.textContent = "Введите email и пароль";
+    return;
+  }
+  if (authMode === "register" && password.length < 8) {
+    authError.textContent = "Пароль должен быть не короче 8 символов";
+    return;
+  }
+
+  authError.textContent = "";
+  authSubmit.disabled = true;
+  try {
+    const data = await api(`/api/auth/${authMode}`, { method: "POST", body: { email, password } });
+    authForm.reset();
+    await enterApp(data.user);
+  } catch (error) {
+    authError.textContent = error.message;
+  } finally {
+    authSubmit.disabled = false;
+  }
+});
+
+logoutBtn.addEventListener("click", async () => {
+  logoutBtn.disabled = true;
+  await api("/api/auth/logout", { method: "POST" }).catch(() => {});
+  logoutBtn.disabled = false;
+  leaveApp();
+});
 
 tabButtons.forEach((button) => {
   button.addEventListener("click", () => showTab(button.dataset.tab));
@@ -85,23 +133,28 @@ typeInput.addEventListener("change", () => {
   fillCategories(typeInput.value);
 });
 
-form.addEventListener("submit", (event) => {
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const draft = readForm();
   if (!draft) return;
 
-  if (editingId) {
-    transactions = transactions.map((item) =>
-      item.id === editingId ? { ...draft, id: editingId } : item
-    );
-  } else {
-    transactions.push({ ...draft, id: createId() });
+  submitBtn.disabled = true;
+  try {
+    if (editingId) {
+      const data = await api(`/api/transactions/${editingId}`, { method: "PUT", body: draft });
+      transactions = transactions.map((item) => (item.id === editingId ? data.transaction : item));
+    } else {
+      const data = await api("/api/transactions", { method: "POST", body: draft });
+      transactions.push(data.transaction);
+    }
+    resetForm();
+    render();
+    showTab("list");
+  } catch (error) {
+    showError(error.message);
+  } finally {
+    submitBtn.disabled = false;
   }
-
-  saveTransactions();
-  resetForm();
-  render();
-  showTab("list");
 });
 
 cancelBtn.addEventListener("click", resetForm);
@@ -149,31 +202,69 @@ function applyTheme(theme) {
   localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
 }
 
-function loadTransactions() {
+async function api(path, { method = "GET", body } = {}) {
+  const options = { method, credentials: "same-origin", headers: {} };
+  if (body !== undefined) {
+    options.headers["Content-Type"] = "application/json";
+    options.body = JSON.stringify(body);
+  }
+
+  let response;
   try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!Array.isArray(raw)) return [];
-    return raw.filter(isValidTransaction);
+    response = await fetch(path, options);
   } catch {
-    return [];
+    throw new Error("Нет связи с сервером. Проверьте интернет.");
+  }
+
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 401 && !path.startsWith("/api/auth/")) {
+    leaveApp();
+    throw new Error("Сессия закончилась. Войдите снова.");
+  }
+  if (!response.ok) throw new Error(data.error || "Что-то пошло не так. Попробуйте ещё раз.");
+  return data;
+}
+
+async function restoreSession() {
+  try {
+    const data = await api("/api/auth/me");
+    await enterApp(data.user);
+  } catch {
+    leaveApp();
   }
 }
 
-function saveTransactions() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+async function enterApp(user) {
+  accountEmail.textContent = user.email;
+  const data = await api("/api/transactions");
+  transactions = data.transactions;
+  resetForm();
+  render();
+  document.body.dataset.auth = "user";
 }
 
-function isValidTransaction(item) {
-  return Boolean(
-    item &&
-      typeof item.id === "string" &&
-      (item.type === "income" || item.type === "expense") &&
-      typeof item.amount === "number" &&
-      item.amount > 0 &&
-      typeof item.category === "string" &&
-      /^\d{4}-\d{2}-\d{2}$/.test(item.date) &&
-      typeof item.note === "string"
-  );
+function leaveApp() {
+  transactions = [];
+  accountEmail.textContent = "";
+  resetForm();
+  render();
+  document.body.dataset.auth = "guest";
+  setAuthMode(authMode);
+}
+
+function setAuthMode(mode) {
+  authMode = mode === "register" ? "register" : "login";
+  const registering = authMode === "register";
+  authTitle.textContent = registering ? "Создание аккаунта" : "Вход в аккаунт";
+  authSubmit.textContent = registering ? "Зарегистрироваться" : "Войти";
+  authPassword.autocomplete = registering ? "new-password" : "current-password";
+  authHint.hidden = !registering;
+  authError.textContent = "";
+  authModeButtons.forEach((button) => {
+    const selected = button.dataset.authMode === authMode;
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+  });
 }
 
 function readForm() {
@@ -222,14 +313,19 @@ function startEdit(id) {
   amountInput.focus();
 }
 
-function removeTransaction(id) {
+async function removeTransaction(id) {
   const item = transactions.find((entry) => entry.id === id);
   if (!item) return;
   const confirmed = window.confirm("Удалить операцию?");
   if (!confirmed) return;
+  try {
+    await api(`/api/transactions/${id}`, { method: "DELETE" });
+  } catch (error) {
+    window.alert(error.message);
+    return;
+  }
   transactions = transactions.filter((entry) => entry.id !== id);
   if (editingId === id) resetForm();
-  saveTransactions();
   render();
 }
 
@@ -562,11 +658,6 @@ function todayISO() {
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 10);
-}
-
-function createId() {
-  if (window.crypto && typeof crypto.randomUUID === "function") return crypto.randomUUID();
-  return `tx-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function showError(message) {

@@ -13,7 +13,7 @@
     })();
   </script>
 </head>
-<body>
+<body data-auth="loading">
   <div class="page">
     <header class="topbar">
       <div>
@@ -21,14 +21,44 @@
         <h1>Трекер доходов и расходов</h1>
       </div>
       <div class="topbar-controls">
+        <div class="account requires-user">
+          <span class="account-email" id="account-email"></span>
+          <button type="button" id="logout-btn" class="theme-toggle">Выйти</button>
+        </div>
         <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false">Тёмная тема</button>
-        <label class="month-field">
+        <label class="month-field requires-user">
           <span>Месяц</span>
           <input type="month" id="month" name="month">
         </label>
       </div>
     </header>
 
+    <p class="status-line requires-loading">Загрузка…</p>
+
+    <section class="auth-screen requires-guest" aria-labelledby="auth-title">
+      <article class="panel auth-card">
+        <div class="auth-switch" role="tablist" aria-label="Вход или регистрация">
+          <button type="button" class="tab" id="auth-mode-login" role="tab" data-auth-mode="login" aria-selected="true">Вход</button>
+          <button type="button" class="tab" id="auth-mode-register" role="tab" data-auth-mode="register" aria-selected="false" tabindex="-1">Регистрация</button>
+        </div>
+        <h2 id="auth-title">Вход в аккаунт</h2>
+        <form id="auth-form" autocomplete="on" novalidate>
+          <label>
+            Email
+            <input id="auth-email" name="email" type="email" autocomplete="email" required maxlength="254">
+          </label>
+          <label>
+            Пароль
+            <input id="auth-password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="72">
+          </label>
+          <p class="auth-hint" id="auth-hint" hidden>Не короче 8 символов.</p>
+          <button type="submit" id="auth-submit">Войти</button>
+          <p class="form-error" id="auth-error" role="alert"></p>
+        </form>
+      </article>
+    </section>
+
+    <div class="app requires-user">
     <nav class="tabs" role="tablist" aria-label="Разделы">
       <button type="button" class="tab" id="tab-summary" role="tab" data-tab="summary" aria-selected="true" aria-controls="panel-summary">Сводка</button>
       <button type="button" class="tab" id="tab-charts" role="tab" data-tab="charts" aria-selected="false" tabindex="-1" aria-controls="panel-charts">Графики</button>
@@ -131,6 +161,7 @@
         </div>
       </article>
     </section>
+    </div>
     </div>
   </div>
   <script src="script.js"></script>
