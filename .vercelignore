@@ -5,6 +5,7 @@
 .cursor
 .neon
 node_modules
+dist
+landing/dist
 db
-scripts
 skills-lock.json

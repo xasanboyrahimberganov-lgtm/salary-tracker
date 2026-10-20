@@ -6,7 +6,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "migrate": "node --env-file=.env.local scripts/migrate.js"
+    "migrate": "node --env-file=.env.local scripts/migrate.js",
+    "build": "npm run build --prefix landing && node scripts/build.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",

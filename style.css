@@ -508,6 +508,19 @@ body[data-auth="user"] .requires-loading {
   gap: 14px;
 }
 
+.auth-about {
+  display: block;
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.auth-about:hover {
+  color: var(--ink);
+}
+
 .auth-hint {
   margin: -6px 0 0;
   color: var(--muted);
